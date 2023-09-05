@@ -7,7 +7,7 @@ class q2save:
         #카메라 관련 설정
         camera_num = camera_num
         dirpath = './q2save/'
-        window_name = 'Press Q to save Image / ESC = Quit'
+        window_name = 'Press Q to save Image // Press S to change Mode // ESC = Quit'
         self.camera_setting = None
         self.name = 0
 
@@ -22,7 +22,10 @@ class q2save:
                 os.mkdir(dirpath)
 
         self.load_camera(camera_num)
-        print("I'm Ready to Start!")
+        #print("I'm Ready to Start!")
+        saving = False
+        auto_mode = True
+        saved_count = 0
 
         while self.cameras.IsGrabbing():
             self.grabResult = self.cameras.RetrieveResult(5000, pylon.TimeoutHandling_ThrowException)
@@ -31,21 +34,51 @@ class q2save:
                 image_raw = self.converter.Convert(self.grabResult)
                 image = image_raw.GetArray()
                 image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+                #image = image[0:494, 144:600]
                 self.img = image
-
-                cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
-                cv2.imshow(window_name, self.img)
-
+                
                 k = cv2.waitKey(1) & 0xFF
 
                 if k == ord('q'):
+                    if auto_mode:
+                        if not saving:
+                            saving = True
+                            print("Auto Image Saving system ON...")
+                    else:
+                        print("Save Image as {}.jpg".format(self.name))
+                        self.save_img(dirpath)
+
+                if saving and saved_count <= 100:
                     print("Save Image as {}.jpg".format(self.name))
                     self.save_img(dirpath)
+                    saved_count += 1
 
+                if saved_count > 100:
+                    print("Auto Image Saving system OFF...")
+                    saving = False
+                    saved_count = 0
+
+                if k == ord('s'):
+                    if auto_mode:
+                        auto_mode = False
+                        print("MODE Changed : Manual")
+                    else:
+                        auto_mode = True
+                        print("MODE Changed : Auto")
+                
                 if k == 27:
                     cv2.destroyAllWindows()
                     break
 
+                if auto_mode:
+                    cv2.putText(image, "Auto", (300,50), cv2.FONT_HERSHEY_PALIN, 2, (255,0,0), 2)
+                else:
+                    cv2.putText(image, "Manual", (300,50), cv2.FONT_HERSHEY_PALIN, 2, (255,0,0), 2)
+                    
+                cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
+                cv2.imshow(window_name, image)
+
+    
     def load_camera(self, camera_num):  # 카메라 설정 불러오기
         maxCamerasToUse = 1
         tlFactory = pylon.TlFactory.GetInstance()
