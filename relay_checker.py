@@ -126,8 +126,9 @@ class Relay(object):
 if __name__ == '__main__':
 	from time import sleep
 
+	user_input = input("릴레이의 숫자를 입력하세요: ")
 	
-	relay_type = 'USBRelay8' # 'USBRelay2'
+	relay_type = f'USBRelay{user_input}' # 'USBRelay2'
 	relay_num = int(relay_type[-1])
 	
 	dic=[]
