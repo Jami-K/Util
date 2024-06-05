@@ -100,7 +100,7 @@ if __name__ == "__main__":
     
         image_raw, image_rgb, maked_img, grabResult, grab_on = CAM.get_img(cameras, converter, image_no, image_no)
     
-        if operating == 1:
+        if operating == 1 and grab_on == 2:
             if last_img_save_number < 10:
                 img_name = datetime.now().strftime('%Y-%m-%d_%H-%M-%S-%f')
                 Q2save(maked_img, dir_path, img_name)
