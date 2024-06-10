@@ -8,6 +8,8 @@ class Camera:
     def __init__(self, camera_ip, camera_setting, camera_mode='VIDEO'):
         self.camera_ip = camera_ip
         self.camera_setting = camera_setting
+        self.camera_mode = camera_mode
+        
     """ 카메라 설정 """
     def load_camera(self):
         maxCamerasToUse = 1
@@ -37,9 +39,9 @@ class Camera:
                     raise NameError(f"카메라 pfs 설정파일 오류 : \n{str(e)}")
             
             self.cam.TriggerMode.SetValue('Off')
-            if camera_mode == 'VIDEO':
+            if self.camera_mode == 'VIDEO':
                 self.cam.StartGrabbing(pylon.GrabStrategy_LatestImageOnly)
-            elif camera_mode == 'TRIGGER':
+            elif self.camera_mode == 'TRIGGER':
                 try:
                     self.cam.TriggerSelector.SetValue('FrameStart')
                     self.cam.TriggerSource.SetValue('Line1')
