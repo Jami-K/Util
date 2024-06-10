@@ -5,37 +5,61 @@ from pypylon import pylon
 
 class Camera:
     """ 카메라 활성화 """
-    def __init__(self,camera_ip,camera_setting):
+    def __init__(self, camera_ip, camera_setting, camera_mode='VIDEO'):
         self.camera_ip = camera_ip
         self.camera_setting = camera_setting
     """ 카메라 설정 """
     def load_camera(self):
         maxCamerasToUse = 1
-        tlFactory = pylon.TlFactory.GetInstance()
-        devices = tlFactory.EnumerateDevices()
-        for dev_info in devices:
-            #print(dev_info)
-            if dev_info.GetIpAddress() == self.camera_ip:
-                cam_info = dev_info
-                print('Camera_IP :',cam_info.GetIpAddress())
-        if len(devices) == 0:
+        devices = pylon.TlFactory.GetInstance().EnumerateDevices()
+        selectedDevice = None
+        
+        self.cam = None
+        
+        if len(devices) > 0:
+            for device in devices:
+                if device.GetIpAddress() == self.camera_ip:
+                    selectedDevice = device
+                    print('Camera_IP :', selectedDevice.GetIpAddress())
+        elif len(devices) == 0:
             raise pylon.RuntimeException("\n카메라 네트워크 상태 또는 주소를 확인해주세요.")
 
-        self.cameras = pylon.InstantCameraArray(min(len(devices), maxCamerasToUse))
-        for i, self.cam in enumerate(self.cameras):
-            self.cam.Attach(tlFactory.CreateDevice(cam_info))
-        self.cameras.Open()
-        try:
-            pylon.FeaturePersistence.Load(self.camera_setting, self.cam.GetNodeMap(), True)
-        except:
-            raise pylon.RuntimeException("\n카메라 세팅 파일이 없습니다.")
-        self.cameras.StartGrabbing(pylon.GrabStrategy_LatestImageOnly)
-        self.converter = pylon.ImageFormatConverter()
-        self.converter.OutputPixelFormat = pylon.PixelType_BGR8packed
-        self.converter.OutputBitAlignment = pylon.OutputBitAlignment_MsbAligned
-        return self.cam,self.cameras,self.converter
+        if selectedDevice is not None:
+            try:
+                self.cam = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateDevice(selectedDevice))
+                self.cam.Open()
+            except: pass
+            
+            if self.camera_setting is not None:
+                try:
+                    pylon.FeaturePersistence.Load(self.camera_setting, self.cam.GetNodeMap(), True)
+                except pylon.GenericException as e:
+                    raise NameError(f"카메라 pfs 설정파일 오류 : \n{str(e)}")
+            
+            self.cam.TriggerMode.SetValue('Off')
+            if camera_mode == 'VIDEO':
+                self.cam.StartGrabbing(pylon.GrabStrategy_LatestImageOnly)
+            elif camera_mode == 'TRIGGER':
+                try:
+                    self.cam.TriggerSelector.SetValue('FrameStart')
+                    self.cam.TriggerSource.SetValue('Line1')
+                    self.cam.TriggerActivation.SetValue('RisingEdge')
+                    self.cam.TriggerMode.SetValue('On')
+                    self.cam.StartGrabbing(pylon.GrabStrategy_OneByOne)
+                except pylon.GenericException as e:
+                    raise NameError(f"카메라 트리거모드 설정 초기화 오류 : \n{str(e)}")
+
+            try:
+                self.converter = pylon.ImageFormatConverter()
+                self.converter.OutputPixelFormat = pylon.PixelType_BGR8packed
+                self.converter.OutputBitAlignment = pylon.OutputBitAlignment_MsbAligned
+             except Exception as e:
+                raise NameError(f"카메라 이미지 컨버터 설정 초기화 오류 : \n{str(e)}")   
+                
+            return self.cam, self.converter
+            
     """ 이미지 생성 """
-    def get_img(self,cameras,converter,image_no,image):
+    def get_img(self, cameras, converter, image_no):
         grab_on = 0 #카메라 인식 초기화
         grabResult = 0
         try:
@@ -45,14 +69,20 @@ class Camera:
                 #image_raw = cv2.rotate(image_raw,cv2.ROTATE_90_CLOCKWISE) #시계방향 90도 회전
                 image_rgb = cv2.cvtColor(image_raw, cv2.COLOR_BGR2RGB)
                 grab_on = 2
-                return image_raw,image_rgb,image_rgb,grabResult,grab_on
+                return image_raw, image_rgb, grabResult, grab_on
             else : 
                 grab_on = 1
                 print('Can\'t Read the Image')
         except:
             grab_on = 0
             print('Can\'t Read the Camera')
-        return image_no,image,image,grabResult,grab_on #인식 실패 , 카메라 고장, 센서 미입력 등
+        return image_no, image_no, grabResult, grab_on #인식 실패 , 카메라 고장, 센서 미입력 등
+
+    def destory_cam(self):
+        if self.cam is not None:
+            self.cam.StopGrabbing()
+            self.cam.Close()
+            self.cam = None
 
 def create_folder(path):
     if not os.path.exists(path):
@@ -74,7 +104,7 @@ if __name__ == "__main__":
     camera_ip = '192.168.80.1'
     camera_setting = './acA640-120gm_23532785.pfs'
 
-    cam, cameras, converter = Camera(camera_ip, camera_setting).load_camera()
+    cam, converter = Camera(camera_ip, camera_setting, camera_mode='TRIGGER').load_camera()
     
     window_name = 'Press Q to start saving Image / Press S to stop / ESC = Quit'
     last_save_time = time.time()
@@ -96,11 +126,9 @@ if __name__ == "__main__":
     cv2.imshow(window_name, maked_img)
     
     while True:
-        CAM = Camera(camera_ip, camera_setting)
+        image_raw, maked_img, grabResult, grab_on = CAM.get_img(cam, converter, image_no)
     
-        image_raw, image_rgb, maked_img, grabResult, grab_on = CAM.get_img(cameras, converter, image_no, image_no)
-    
-        if operating == 1 and grab_on == 2:
+        if grab_on == 2 and operating == 1:
             if last_img_save_number < 10:
                 img_name = datetime.now().strftime('%Y-%m-%d_%H-%M-%S-%f')
                 Q2save(maked_img, dir_path, img_name)
