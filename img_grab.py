@@ -151,6 +151,8 @@ if __name__ == "__main__":
             operating = 1
         elif k == ord('s'):
             operating = 0
+            last_img_save_number = 0
+            last_save_time = time.time()
         elif k == 27:
             break
         
