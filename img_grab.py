@@ -55,7 +55,7 @@ class Camera:
                 self.converter = pylon.ImageFormatConverter()
                 self.converter.OutputPixelFormat = pylon.PixelType_BGR8packed
                 self.converter.OutputBitAlignment = pylon.OutputBitAlignment_MsbAligned
-             except Exception as e:
+            except Exception as e:
                 raise NameError(f"카메라 이미지 컨버터 설정 초기화 오류 : \n{str(e)}")   
                 
             return self.cam, self.converter
@@ -106,7 +106,8 @@ if __name__ == "__main__":
     camera_ip = '192.168.80.1'
     camera_setting = './acA640-120gm_23532785.pfs'
 
-    cam, converter = Camera(camera_ip, camera_setting, camera_mode='TRIGGER').load_camera()
+    CAM = Camera(camera_ip, camera_setting, camera_mode='TRIGGER')
+    cam, converter = CAM.load_camera()
     
     window_name = 'Press Q to start saving Image / Press S to stop / ESC = Quit'
     last_save_time = time.time()
@@ -156,5 +157,5 @@ if __name__ == "__main__":
         if grabResult != 0:
             grabResult.Release()
     
-    cameras.StopGrabbing()
+    CAM.destory_cam()
     cv2.destroyAllWindows()
