@@ -61,26 +61,27 @@ class Camera:
             return self.cam, self.converter
             
     """ 이미지 생성 """
-    def get_img(self, cameras, converter, image_no):
+    def get_img(self, image_no):
         grab_on = 0 #카메라 인식 초기화
         grabResult = 0
         try:
-            grabResult = cameras.RetrieveResult(2000, pylon.TimeoutHandling_ThrowException) #2초 반응없을 시 넘어감 
+            grabResult = self.cam.RetrieveResult(2000, pylon.TimeoutHandling_ThrowException) #2초 반응없을 시 넘어감 
             if grabResult.GrabSucceeded():
-                image_raw = converter.Convert(grabResult).GetArray()
+                image_raw = self.converter.Convert(grabResult).GetArray()
                 #image_raw = cv2.rotate(image_raw,cv2.ROTATE_90_CLOCKWISE) #시계방향 90도 회전
-                image_rgb = cv2.cvtColor(image_raw, cv2.COLOR_BGR2RGB)
+                #image_rgb = cv2.cvtColor(image_raw, cv2.COLOR_BGR2RGB) # 흑백이미지용
+                image_rgb = cv2.cvtColor(cv2.cvtColor(image_raw, cv2.COLOR_BGR2RGB), cv2.COLOR_BGR2RGB) # 컬러이미지용
                 grab_on = 2
                 return image_raw, image_rgb, grabResult, grab_on
             else : 
                 grab_on = 1
-                print('Can\'t Read the Image')
+                #print('Can\'t Read the Image')
         except:
             grab_on = 0
-            print('Can\'t Read the Camera')
+            #print('Can\'t Read the Camera')
         return image_no, image_no, grabResult, grab_on #인식 실패 , 카메라 고장, 센서 미입력 등
 
-    def destory_cam(self):
+    def destroy_cam(self):
         if self.cam is not None:
             self.cam.StopGrabbing()
             self.cam.Close()
@@ -103,13 +104,13 @@ def Q2save(image, path, name):
 
 
 if __name__ == "__main__":
-    camera_ip = '192.168.80.1'
-    camera_setting = './acA640-120gm_23532785.pfs'
+    camera_ip = '192.168.60.1'
+    camera_setting = './12B_BURN_UP.pfs'
 
-    CAM = Camera(camera_ip, camera_setting, camera_mode='TRIGGER')
+    CAM = Camera(camera_ip, camera_setting, camera_mode='VIDEO')
     cam, converter = CAM.load_camera()
     
-    window_name = 'Press Q to start saving Image / Press S to stop / ESC = Quit'
+    window_name = 'Press Q = save Image / S = stop / R = reset / P = 1 shot / K = Cam Relay / ESC = Quit'
     last_save_time = time.time()
     last_img_save_number = 0
     operating = 0
@@ -129,15 +130,15 @@ if __name__ == "__main__":
     cv2.imshow(window_name, maked_img)
     
     while True:
-        image_raw, maked_img, grabResult, grab_on = CAM.get_img(cam, converter, image_no)
+        image_raw, maked_img, grabResult, grab_on = CAM.get_img(image_no)
     
         if grab_on == 2 and operating == 1:
-            if last_img_save_number < 10:
+            if last_img_save_number < 100:
                 img_name = datetime.now().strftime('%Y-%m-%d_%H-%M-%S-%f')
                 Q2save(maked_img, dir_path, img_name)
                 last_img_save_number += 1
             else: pass
-            if time.time() - last_save_time >= 300: # 5분이 지났는지 확인
+            if time.time() - last_save_time >= 600: # 10분이 지났는지 확인
                 last_img_save_number = 0
                 last_save_time = time.time()
             else: pass
@@ -149,15 +150,28 @@ if __name__ == "__main__":
         
         if k == ord('q'):
             operating = 1
+            print('Start...')
         elif k == ord('s'):
             operating = 0
+            print('...Stop')
+        elif k == ord('r'):
             last_img_save_number = 0
             last_save_time = time.time()
+            print('---Reset---')
+        elif k == ord('p'):
+            img_name = datetime.now().strftime('%Y-%m-%d_%H-%M-%S-%f')
+            Q2save(maked_img, dir_path, img_name)
+        elif k == ord('k'):
+            print("카메라에서 신호를 출력합니다.")
+            cam.UserOutputValue.SetValue(True)
+            sleep(0.5)
+            cam.UserOutputValue.SetValue(False)
+            print("카메라에서 신호를 초기화합니다.")
         elif k == 27:
             break
         
         if grabResult != 0:
             grabResult.Release()
     
-    CAM.destory_cam()
+    CAM.destroy_cam()
     cv2.destroyAllWindows()
