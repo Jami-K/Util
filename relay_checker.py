@@ -1,157 +1,48 @@
 import hid
+import time
 
-"""
+# HID 장치 목록 확인
+devices = hid.enumerate()
+for d in devices:
+    print(f"Vendor ID: {hex(d['vendor_id'])}, Product ID: {hex(d['product_id'])}")
+    print(f"Manufacturer: {d.get('manufacturer_string', 'N/A')}")
+    print(f"Product: {d.get('product_string', 'N/A')}")
+    print(f"Path: {d['path']}")
+    print("-" * 30)
 
-This relay object uses the HID library instead of usb. 
+# 특정 HID 장치 열기
+VENDOR_ID = 0x16c0  # 예시 Vendor ID
+PRODUCT_ID = 0x05df  # 예시 Product ID
 
-Some scant details about the USB Relay
-http://vusb.wikidot.com/project:driver-less-usb-relays-hid-interface
+try:
+    # 장치를 여는 가장 일반적인 방식
+    device = hid.Device(VENDOR_ID, PRODUCT_ID)
+    print("USB HID 장치에 연결되었습니다.")
+except Exception as e:
+    print(f"장치 연결 실패: {e}")
+    exit()
 
-cython-hidapi module:
-https://github.com/trezor/cython-hidapi
+# 릴레이 제어 함수
+def relay_control(on: bool):
+    """
+    릴레이를 켜거나 끕니다.
+    :param on: True면 켜기, False면 끄기
+    """
+    try:
+        if on:
+            device.write([0x00, 0xFF, 0x01])
+            print("릴레이가 켜졌습니다.")
+        else:
+            device.write([0x00, 0xFF, 0x00])
+            print("릴레이가 꺼졌습니다.")
+    except Exception as e:
+        print(f"릴레이 제어 중 오류가 발생했습니다: {e}")
 
-Installing the module:
-sudo apt-get install python-dev libusb-1.0-0-dev libudev-dev
-pip install --upgrade setuptools
-pip install hidapi
+# 릴레이 테스트
+relay_control(True)
+time.sleep(5)
+relay_control(False)
 
-A list of avaible methods for the hid object:
-https://github.com/trezor/cython-hidapi/blob/6057d41b5a2552a70ff7117a9d19fc21bf863867/chid.pxd#L9
-
-"""
-
-class Relay(object):
-	"""docstring for Relay"""
-	def __init__(self, idVendor=0x16c0, idProduct=0x05df, path=b'1-7:1.0'):
-		self.h = hid.device()
-		#self.h.open(idVendor, idProduct)
-		self.h.open_path(path)
-		self.h.set_nonblocking(1)
-
-	def get_switch_statuses_from_report(self, report):
-		"""
-
-		The report returned is a 8 int list, ex:
-		
-		[76, 72, 67, 88, 73, 0, 0, 2]
-
-		The ints are passed as chars, and this page can help interpret:
-		https://www.branah.com/ascii-converter
-
-		The first 5 in the list are a unique ID, in case there is more than one switch.
-
-		The last three seem to be reserved for the status of the relays. The status should
-		be interpreted in binary and in reverse order.  For example:
-
-		2 = 00000010
-
-		This means that switch 1 is off and switch 2 is on, and all others are off.
-
-		"""
-
-		# Grab the 8th number, which is a integer
-		switch_statuses = report[7]
-
-		# Convert the integer to a binary, and the binary to a list.
-		switch_statuses = [int(x) for x in list('{0:08b}'.format(switch_statuses))]
-
-		# Reverse the list, since the status reads from right to left
-		switch_statuses.reverse()
-
-		# The switch_statuses now looks something like this:
-		# [1, 1, 0, 0, 0, 0, 0, 0]
-		# Switch 1 and 2 (index 0 and 1 respectively) are on, the rest are off.
-
-		return switch_statuses
-
-	def send_feature_report(self, message):
-		self.h.send_feature_report(message)
-
-	def get_feature_report(self):
-		# If 0 is passed as the feature, then 0 is prepended to the report. However,
-		# if 1 is passed, the number is not added and only 8 chars are returned.
-		feature = 1
-		# This is the length of the report. 
-		length = 8
-		return self.h.get_feature_report(feature, length)
-
-	def state(self, relay, on=None):
-		"""
-
-		Getter/Setter for the relay.  
-
-		Getter - If only a relay is specified (with an int), then that relay's status 
-		is returned.  If relay = 0, a list of all the statuses is returned.
-		True = on, False = off.
-
-		Setter - If a relay and on are specified, then the relay(s) status will be set.
-		Either specify the specific relay, 1-8, or 0 to change the state of all relays.
-		on=True will turn the relay on, on=False will turn them off.
-
-		"""
-
-		# Getter
-		if on == None:
-			if relay == 0:
-				report = self.get_feature_report()
-				switch_statuses = self.get_switch_statuses_from_report(report)
-				status = []
-				for s in switch_statuses:
-					status.append(bool(s))
-			else:
-				report = self.get_feature_report()
-				switch_statuses = self.get_switch_statuses_from_report(report)
-				status = bool(switch_statuses[relay-1])
-
-			return status
-
-		# Setter
-		else:
-			if relay == 0:
-				if on:
-					message = [0xFE]
-				else:
-					message = [0xFC]
-			else:
-				# An integer can be passed instead of the a byte, but it's better to
-				# use ints when possible since the docs use them, but it's not neccessary.
-				# https://github.com/jaketeater/simpleusbrelay/blob/master/simpleusbrelay/__init__.py
-				if on:
-					message = [0xFF, relay]
-				else:
-					message = [0xFD, relay]
-
-			self.send_feature_report(message)
-
-if __name__ == '__main__':
-	from time import sleep
-
-	user_input = input("릴레이의 숫자를 입력하세요: ")
-	
-	relay_type = f'USBRelay{user_input}' # 'USBRelay2'
-	relay_num = int(relay_type[-1])
-	
-	dic=[]
-	for i in hid.enumerate():
-	    #print(i)
-	    if i['product_string'] == relay_type:
-	        dic.append(i['path'])
-	print(dic)
-	
-	relay = Relay(path=dic[0])
-	
-	print('모든 릴레이 작동합니다.')
-	relay.state(0, on=True)
-	sleep(1)
-	relay.state(0, on=False)
-	print()
-	
-	for i in range(1, relay_num+1):
-	    print(f'{i}번째 릴레이 작동합니다.')
-	    relay.state(i, on=True)
-	    sleep(1)
-	    relay.state(i, on=False)
-	    print()
-	
-	relay.h.close()
-        
+# 장치 닫기
+device.close()
+print("장치 연결이 해제되었습니다.")
