@@ -20,5 +20,5 @@ changeName(dir_path,type_name)
 # find ./ -type f -print0 | sort -zR | tail -zn +10000 | xargs -0 rm
 
 # TXT 파일 내부 글자 바꾸는 방법 (vi)
-# :%s(기존텍스트)/(변경텍스트)
-# '/'는 앞에 | 붙일 것
+# :%s/(기존텍스트)/(변경텍스트)
+# '/'는 앞에 \ 붙일 것
