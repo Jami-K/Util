@@ -15,4 +15,10 @@ changeName(dir_path,type_name)
 
 # 간편하게 폴더 내 모든 파일 옮기는 방법
 # cp -r 폴더명/* Train
+
+# 폴더 내부 랜덤하게 파일 삭제하는 방법
 # find ./ -type f -print0 | sort -zR | tail -zn +10000 | xargs -0 rm
+
+# TXT 파일 내부 글자 바꾸는 방법 (vi)
+# :%s(기존텍스트)/(변경텍스트)
+# '/'는 앞에 | 붙일 것
