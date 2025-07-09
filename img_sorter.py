@@ -78,6 +78,7 @@ class ImageClassifier:
 
         image_path = self.image_paths[self.current_index]
         img = Image.open(image_path)
+        img = img.resize((1280, 1024))
         img.thumbnail((1000, 1000)) # 이미지 크기 확대
         self.tk_img = ImageTk.PhotoImage(img)
 
@@ -112,7 +113,7 @@ class ImageClassifier:
 
 if __name__ == "__main__":
     root = Tk()
-    window_width, window_height = 600, 700
+    window_width, window_height = 1920, 1080
     screen_width = root.winfo_screenwidth()
     screen_height = root.winfo_screenheight()
     x = (screen_width // 2) - (window_width // 2)
