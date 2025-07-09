@@ -17,7 +17,7 @@ class ImageClassifier:
         self.history = []  # (file_path, moved_to)
 
         self.status = StringVar(value="OK")  # 기본 선택값
-        self.custom_font = tkFont.Font(family="NanumGothic", size=12)
+        self.custom_font = tkFont.Font(family="NanumGothic", size=16)
 
         # 경로 선택 버튼
         self.select_button = Button(root, text="이미지 폴더 선택", command=self.select_folder, font=self.custom_font)
@@ -73,8 +73,8 @@ class ImageClassifier:
 
     def load_image(self):
         if self.current_index >= len(self.image_paths):
-            self.image_label.config(text="모든 이미지 분류 완료!")
-            self.progress_label.config(text="")
+            self.image_label.config(image="", text="모든 이미지 분류 완료!", font=self.custom_font)
+            self.progress_label.config(text="작업이 완료되었습니다.")
             return
 
         image_path = self.image_paths[self.current_index]
