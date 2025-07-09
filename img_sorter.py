@@ -9,7 +9,7 @@ from PIL import Image, ImageTk
 class ImageClassifier:
     def __init__(self, root):
         self.root = root
-        self.root.title("이미지 분류기 (Space : 폴더 이동)")
+        self.root.title("이미지 분류기 (Space: 이미지 이동 / 화살표: 유형 변경 / p: 통과 / z: 실행취소)")
 
         self.image_paths = []
         self.current_index = 0
@@ -50,7 +50,8 @@ class ImageClassifier:
         self.root.bind("<Left>", lambda e: self.status.set("OK"))
         self.root.bind("<Right>", lambda e: self.status.set("NG"))
         self.root.bind("q", lambda e: self.root.destroy())
-        self.root.bind("Q", lambda e: self.root.destroy())
+        self.root.bind("p", lambda e: self.skip_image())
+        self.root.bind("z", lambda e: self.undo_last())
 
     def select_folder(self):
         self.selected_folder = filedialog.askdirectory()
@@ -97,6 +98,11 @@ class ImageClassifier:
         self.history.append((moved_path, self.current_index))
         self.current_index += 1
         self.load_image()
+
+    def skip_image(self):
+        if self.current_index < len(self.image_paths):
+            self.current_index += 1
+            self.load_image()
 
     def undo_last(self):
         if not self.history:
