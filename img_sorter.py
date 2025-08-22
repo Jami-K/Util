@@ -95,6 +95,14 @@ class ImageClassifier:
         moved_path = os.path.join(target_dir, os.path.basename(current_image))
 
         shutil.move(current_image, moved_path)
+        
+        base, _ = os.path.splitext(current_image)
+        txt_file = base + ".txt"
+        moved_txt_path = None
+        if os.path.exists(txt_file):
+            moved_txt_path = os.path.join(target_dir, os.path.basename(txt_file))
+            shutil.move(txt_file, moved_txt_path)
+            
         self.history.append((moved_path, self.current_index))
         self.current_index += 1
         self.load_image()
@@ -111,6 +119,12 @@ class ImageClassifier:
         last_moved_path, prev_index = self.history.pop()
         original_path = os.path.join(self.selected_folder, os.path.basename(last_moved_path))
         shutil.move(last_moved_path, original_path)
+        
+        if last_moved_txt and os.path.exists(last_moved_txt):
+            original_txt_path = os.path.join(self.selected_folder, os.path.basename(last_moved_txt))
+            shutil.move(last_moved_txt, original_txt_path)
+        else:
+            original_txt_path = None
 
         # 리스트에 다시 추가하고 인덱스 조정
         self.image_paths.insert(prev_index, original_path)
