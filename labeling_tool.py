@@ -13,7 +13,7 @@ def change_label_all(dir, label_before, label_after): # 라벨 일괄 변경
         file_path = os.path.join(LABEL_DIR, filename)
 
         # 1) 읽기
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
             lines = f.readlines()
 
         # 2) 변환
@@ -45,12 +45,17 @@ def label_checker(dir): # 라벨 분포도 확인
     class_counter = Counter()
 
     for filename in os.listdir(LABEL_DIR):
+        # ✅ macOS 숨김 메타파일 삭제
+        if filename.startswith("._") and filename.endswith(".txt"):
+            os.remove(os.path.join(LABEL_DIR, filename))
+            continue
+            
         if not filename.endswith(".txt"):
             continue
 
         file_path = os.path.join(LABEL_DIR, filename)
 
-        with open(file_path, "r") as f:
+        with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
             for line in f:
                 line = line.strip()
                 if not line:
@@ -102,7 +107,7 @@ def label_checker_minor(dir): # 이상 클래스 탐지
 
 
 if __name__ == "__main__":
-    label_dir = r"/media/nongshim/6b72d907-6052-4623-83a8-ffe32c269d0b1/Database/film/251223k/20251222/Shin"  # 라벨 폴더 경로로 수정
+    label_dir = r"/media/nongshim/6b72d907-6052-4623-83a8-ffe32c269d0b1/Database/film/251210p/NG"  # 라벨 폴더 경로로 수정
   
     while True:
         print(f"\n📂 현재 선택된 라벨 경로:")
