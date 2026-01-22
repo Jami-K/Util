@@ -5,16 +5,18 @@ def change_label_all(dir, label_before, label_after): # 라벨 일괄 변경
     LABEL_DIR = dir
     OLD_CLASS = str(label_before)
     NEW_CLASS = str(label_after)
-  
+
     for filename in os.listdir(LABEL_DIR):
         if not filename.endswith(".txt"):
             continue
 
         file_path = os.path.join(LABEL_DIR, filename)
 
-        with open(file_path, "r") as f:
+        # 1) 읽기
+        with open(file_path, "r", encoding="utf-8") as f:
             lines = f.readlines()
 
+        # 2) 변환
         new_lines = []
         for line in lines:
             line = line.strip()
@@ -22,16 +24,19 @@ def change_label_all(dir, label_before, label_after): # 라벨 일괄 변경
                 continue
 
             parts = line.split()
-            if parts[0] == OLD_CLASS:
+            if parts and parts[0] == OLD_CLASS:
                 parts[0] = NEW_CLASS
 
             new_lines.append(" ".join(parts))
 
-        if new_lines:
-            f.write("\n".join(new_lines) + "\n")
-        else:
-            f.write("")with open(file_path, "w") as f:
+        # 3) 쓰기 (읽기 with와 별개로 다시 열기)
+        with open(file_path, "w", encoding="utf-8") as f:
+            if new_lines:
                 f.write("\n".join(new_lines) + "\n")
+            else:
+                # 빈 파일로 만들고 싶으면 그냥 "" 쓰면 됨
+                f.write("")
+                # 혹시 " " 한 칸 넣고 싶으면 f.write(" ") 로 바꾸면 됨
 
     print("✅ 모든 라벨 수정 완료")
 
@@ -97,7 +102,7 @@ def label_checker_minor(dir): # 이상 클래스 탐지
 
 
 if __name__ == "__main__":
-    LABEL_DIR = r"./labels"  # 라벨 폴더 경로로 수정
+    label_dir = r"/media/nongshim/6b72d907-6052-4623-83a8-ffe32c269d0b1/Database/film/251223k/20251222/Shin"  # 라벨 폴더 경로로 수정
   
     while True:
         print(f"\n📂 현재 선택된 라벨 경로:")
