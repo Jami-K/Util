@@ -1,6 +1,6 @@
 import os
 import shutil
-from tkinter import Tk, Button, Label, Frame, filedialog, StringVar, Radiobutton, Toplevel
+from tkinter import Tk, Button, Label, Frame, filedialog, StringVar, Radiobutton, Toplevel, Checkbutton
 from tkinter import font as tkFont
 from tkinter import simpledialog, messagebox
 from PIL import Image, ImageTk, ImageDraw, ImageFont
@@ -354,6 +354,14 @@ class ImageClassifier:
         # 라디오 버튼 프레임
         self.radio_frame = Frame(root)
         self.radio_frame.pack()
+        
+        # 라벨 오버레이 토글
+        self.show_labels = StringVar(value="ON")  # 간단히 문자열로 (ON/OFF)
+        self.toggle_button = Button(root,
+                                    text="라벨 표시: ON (l)",
+                                    command=self.toggle_labels,
+                                    font=self.custom_font)
+        self.toggle_button.pack()
 
         self.ok_radio = Radiobutton(self.radio_frame, text="OK (←)", variable=self.status, value="OK", font=self.custom_font)
         self.ng_radio = Radiobutton(self.radio_frame, text="NG (→)", variable=self.status, value="NG", font=self.custom_font)
@@ -376,6 +384,7 @@ class ImageClassifier:
         self.root.bind("p", lambda e: self.skip_image())
         self.root.bind("z", lambda e: self.undo_last())
         self.root.bind("e", lambda e: self.open_label_editor())  # 단축키로도 편집
+        self.root.bind("l", lambda e: self.toggle_labels()) # 라벨 토글 단축키
 
     def select_folder(self):
         self.selected_folder = filedialog.askdirectory()
@@ -412,7 +421,7 @@ class ImageClassifier:
             x2 = max(0, min(W - 1, x2))
             y2 = max(0, min(H - 1, y2))
 
-            draw.rectangle([x1, y1, x2, y2], outline="red", width=3)
+            draw.rectangle([x1, y1, x2, y2], outline="red", width=1)
 
             text = str(cls)
             try:
@@ -436,20 +445,30 @@ class ImageClassifier:
             return
 
         image_path = self.image_paths[self.current_index]
-        img = Image.open(image_path).convert("RGB")
 
-        # 화면 표시 크기
-        max_w, max_h = 1600, 900
-        img.thumbnail((max_w, max_h), Image.LANCZOS)
+        try:
+            img = Image.open(image_path).convert("RGB")
+            img = img.resize((1280, 1024))
+        except Exception as e:
+            self.label_info.config(text=f"이미지 로드 실패: {os.path.basename(image_path)} ({e})")
+            self.current_index += 1
+            self.load_image()
+            return
 
-        # 라벨 오버레이 표시
+        img.thumbnail((1000, 1000), Image.LANCZOS)
+
+        # 라벨 오버레이 표시(토글 반영)
         txt_path = yolo_txt_path(image_path)
         labels = parse_yolo_txt(txt_path) if os.path.exists(txt_path) else []
-        if labels:
+
+        if labels and self.show_labels.get() == "ON":
             img = self._draw_labels_on_image(img, labels)
-            self.label_info.config(text=f"라벨: {os.path.basename(txt_path)} / {len(labels)}개")
+            self.label_info.config(text=f"라벨: {os.path.basename(txt_path)} / {len(labels)}개 (표시 ON)")
         else:
-            self.label_info.config(text="라벨: (없음)")
+            if labels:
+                self.label_info.config(text=f"라벨: {os.path.basename(txt_path)} / {len(labels)}개 (표시 OFF)")
+            else:
+                self.label_info.config(text="라벨: (없음)")
 
         self.tk_img = ImageTk.PhotoImage(img)
         self.image_label.config(image=self.tk_img, text="")
@@ -526,6 +545,15 @@ class ImageClassifier:
 
         self.load_image()
 
+    def toggle_labels(self):
+        # ON <-> OFF
+        if self.show_labels.get() == "ON":
+            self.show_labels.set("OFF")
+            self.toggle_button.config(text="라벨 표시: OFF (l)")
+        else:
+            self.show_labels.set("ON")
+            self.toggle_button.config(text="라벨 표시: ON (l)")
+        self.load_image()
 
 if __name__ == "__main__":
     root = Tk()
